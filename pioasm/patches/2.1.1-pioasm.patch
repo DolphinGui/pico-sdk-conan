@@ -1,0 +1,26 @@
+From 8e2ccaf5ef006e364e6f82a7b1a49825b624a61c Mon Sep 17 00:00:00 2001
+From: Shin Umeda <umeda.shin@gmail.com>
+Date: Tue, 29 Apr 2025 20:32:25 -0700
+Subject: [PATCH] version does not depend on parent
+
+---
+ tools/pioasm/CMakeLists.txt | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/tools/pioasm/CMakeLists.txt b/tools/pioasm/CMakeLists.txt
+index a7698cd..35b85ba 100644
+--- a/tools/pioasm/CMakeLists.txt
++++ b/tools/pioasm/CMakeLists.txt
+@@ -76,8 +76,7 @@ install(EXPORT pioasm-targets
+         ${INSTALL_CONFIGDIR}
+ )
+ 
+-include(../../pico_sdk_version.cmake)
+-set(PACKAGE_VERSION "${PICO_SDK_VERSION_MAJOR}.${PICO_SDK_VERSION_MINOR}.${PICO_SDK_VERSION_REVISION}")
++set(PACKAGE_VERSION "2.1.1")
+ 
+ #Create a ConfigVersion.cmake file
+ include(CMakePackageConfigHelpers)
+-- 
+2.49.0
+
