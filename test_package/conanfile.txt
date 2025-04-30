@@ -1,0 +1,4 @@
+[requires]
+raspberry_pi_pico_sdk/2.1.1
+[tool_requires]
+pioasm/2.1.1
