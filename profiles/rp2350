@@ -1,0 +1,9 @@
+[settings]
+build_type=MinSizeRel
+os=baremetal
+arch=cortex-m33
+libc=custom
+
+[options]
+*:platform=rp2350-arm-s
+
