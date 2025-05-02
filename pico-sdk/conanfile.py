@@ -44,10 +44,13 @@ class PicoSDK(ConanFile):
 
     def build(self):
         cmake = CMake(self)
+        # Eventually add option to define PICO_BOOT_STAGE2_CHOOSE_W25Q080
         defs = {"PICO_BOARD": "none", 
             "PICO_PLATFORM": self.options.get_safe("platform"),
             "PICO_SDK_TESTS_ENABLED": "0",
-            "CMAKE_TRY_COMPILE_TARGET_TYPE": "STATIC_LIBRARY"
+            "CMAKE_TRY_COMPILE_TARGET_TYPE": "STATIC_LIBRARY",
+            "PICO_FLASH_SIZE_BYTES" : "1024 * 1024 * 2",
+            "CMAKE_EXPORT_COMPILE_COMMANDS": "On"
         }
         cmake.configure(variables = defs)
         cmake.build()

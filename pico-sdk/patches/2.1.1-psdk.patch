@@ -1,71 +1,125 @@
-From bddd20f928ce76142793bef434d4f75f4af6e433 Mon Sep 17 00:00:00 2001
-From: graham sanderson <graham.sanderson@raspberrypi.com>
-Date: Tue, 18 Feb 2025 17:55:07 -0600
-Subject: [PATCH 01/10] SDK 2.1.1 Release
-
----
- .github/workflows/bazel_build.yml | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/.github/workflows/bazel_build.yml b/.github/workflows/bazel_build.yml
-index 1d98ef7..81b7ae5 100644
---- a/.github/workflows/bazel_build.yml
-+++ b/.github/workflows/bazel_build.yml
-@@ -41,8 +41,8 @@ jobs:
-       - name: Full Bazel build with develop Picotool
-         run: python3 tools/run_all_bazel_checks.py --program=build --picotool-dir=lib/picotool
-       # Checks that the current BCR-requested version of Picotool builds.
--      # - name: Bazel Picotool backwards compatibility
--      #   run: bazel build @picotool//:picotool
-+      - name: Bazel Picotool backwards compatibility
-+        run: bazel build @picotool//:picotool
-   other-bazel-checks:
-     runs-on: ubuntu-latest
-     steps:
--- 
-2.49.0
-
-
-From ee68c78d0afae2b69c03ae1a72bf5cc267a2d94c Mon Sep 17 00:00:00 2001
-From: graham sanderson <graham.sanderson@raspberrypi.com>
-Date: Tue, 18 Feb 2025 20:08:06 -0600
-Subject: [PATCH 02/10] fix doc for SYS_CLK_VREG_VOLTAGE_AUTO_ADJUST_DELAY_US
-
----
- src/rp2_common/hardware_clocks/include/hardware/clocks.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/src/rp2_common/hardware_clocks/include/hardware/clocks.h b/src/rp2_common/hardware_clocks/include/hardware/clocks.h
-index 8320cea..68f4b1a 100644
---- a/src/rp2_common/hardware_clocks/include/hardware/clocks.h
-+++ b/src/rp2_common/hardware_clocks/include/hardware/clocks.h
-@@ -231,7 +231,7 @@ extern "C" {
- #endif
- #endif // PICO_RP2040 && SYS_CLK_KHZ == 200000 && XOSC_KHZ == 12000 && PLL_COMMON_REFDIV == 1
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2ecb515..467f579 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -32,9 +32,6 @@ if (NOT TARGET _pico_sdk_inclusion_marker)
  
--// PICO_CONFIG: SYS_CLK_VREG_VOLTAGE_AUTO_ADJUST_DELAY_US, Number of microseconds to wait after updating regulator voltage due to SYS_CLK_VREG_VOLTAGE_MIN to allow voltage to settle, type=bool, default=1, advanced=true, group=hardware_clocks
-+// PICO_CONFIG: SYS_CLK_VREG_VOLTAGE_AUTO_ADJUST_DELAY_US, Number of microseconds to wait after updating regulator voltage due to SYS_CLK_VREG_VOLTAGE_MIN to allow voltage to settle, type=bool, default=1000, advanced=true, group=hardware_clocks
- #ifndef SYS_CLK_VREG_VOLTAGE_AUTO_ADJUST_DELAY_US
- #define SYS_CLK_VREG_VOLTAGE_AUTO_ADJUST_DELAY_US 1000
- #endif
--- 
-2.49.0
-
-
-From 0c12b35273d11268a4e2438e73c3a48445e7f53d Mon Sep 17 00:00:00 2001
-From: Shin Umeda <umeda.shin@gmail.com>
-Date: Fri, 25 Apr 2025 14:28:36 -0700
-Subject: [PATCH 03/10] remove picotool circular dep
-
----
- src/rp2350/boot_stage2/CMakeLists.txt | 3 ---
- 1 file changed, 3 deletions(-)
-
-diff --git a/src/rp2350/boot_stage2/CMakeLists.txt b/src/rp2350/boot_stage2/CMakeLists.txt
-index e878ccc..74a4e67 100644
---- a/src/rp2350/boot_stage2/CMakeLists.txt
-+++ b/src/rp2350/boot_stage2/CMakeLists.txt
-@@ -54,9 +54,6 @@ function(pico_define_boot_stage2 NAME SOURCES)
+     pico_is_top_level_project(PICO_SDK_TOP_LEVEL_PROJECT)
+ 
+-    set(CMAKE_C_STANDARD 11)
+-    set(CMAKE_CXX_STANDARD 11)
+-
+     if (NOT PICO_SDK_TOP_LEVEL_PROJECT)
+         set(PICO_SDK 1 PARENT_SCOPE)
+     endif()
+@@ -68,4 +65,49 @@ if (NOT TARGET _pico_sdk_inclusion_marker)
+     if (NOT PICO_SDK_TOP_LEVEL_PROJECT)
+         pico_promote_common_scope_vars()
+     endif()
++
++    set(exclude_list "pico_async_context_freertos")
++    if(NOT BUILD_CLIB_LLVM)
++        list(APPEND exclude_list "pico_llvm_libc_interface")
++    endif()
++    if(NOT BUILD_CLIB_NEWLIB)
++        list(APPEND exclude_list "pico_newlib_interface")
++    endif()
++    if(NOT BUILD_CLIB_PICOLIBC)
++        list(APPEND exclude_list "pico_picolibc_interface")
++    endif()
++
++    get_property(PICO_SDK_INTERFACES GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP)
++    # No I don't know why these two libraries are different
++    list(APPEND PICO_SDK_INTERFACES "hardware_regs" "hardware_structs" "hardware_base")
++    foreach(PICO_TARGET ${PICO_SDK_INTERFACES})
++        message(STATUS "Checking ${PICO_TARGET}")
++        if(PICO_TARGET IN_LIST exclude_list 
++            # We are not doing wireless
++            OR PICO_TARGET MATCHES "lwip|mbed|cyw43|btstack|cybt_shared_bus|tinyusb"
++            # Do not build subdependencies bc it screws up the configruation
++            OR PICO_TARGET MATCHES "pico_divider_|pico_float_|pico_double_|pico_sync_"
++            # Ignore internal bootloader targets
++            OR PICO_TARGET MATCHES "boot_stage2")
++
++            continue()
++        endif()
++        
++        if(TARGET ${PICO_TARGET}_headers)
++            get_target_property(include_dir ${PICO_TARGET}_headers INTERFACE_INCLUDE_DIRECTORIES)
++            get_target_property(include_dir_sys ${PICO_TARGET}_headers INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
++            if(include_dir_sys)
++                list(APPEND include_dir ${include_dir_sys})
++            endif()
++        endif()
++        if(include_dir)
++            list(APPEND include_dirs ${include_dir})
++        endif()
++        get_target_property(sources ${PICO_TARGET} INTERFACE_SOURCES )
++        add_library(${PICO_TARGET}_dep STATIC empty.c)
++        target_link_libraries(${PICO_TARGET}_dep PUBLIC ${PICO_TARGET} pico_base)
++        install(TARGETS ${PICO_TARGET}_dep)
++    endforeach()
++    message(STATUS "Writing list of include directories to file")
++    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/INCLUDELIST.txt "${include_dirs}")
+ endif()
+diff --git a/empty.c b/empty.c
+new file mode 100644
+index 0000000..2283e74
+--- /dev/null
++++ b/empty.c
+@@ -0,0 +1 @@
++// does literally nothing
+\ No newline at end of file
+diff --git a/pico_sdk_init.cmake b/pico_sdk_init.cmake
+index b708b63..c67b055 100644
+--- a/pico_sdk_init.cmake
++++ b/pico_sdk_init.cmake
+@@ -86,8 +86,4 @@ if (NOT TARGET _pico_sdk_pre_init_marker)
+     endmacro()
+ 
+     include(pico_pre_load_platform)
+-
+-    # We want to configure correct toolchain prior to project load
+-    # todo perhaps this should be included by the platform instead?
+-    include(pico_pre_load_toolchain)
+ endif()
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index f21db2d..86fea90 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -88,6 +88,8 @@ endfunction()
+ macro(pico_simple_hardware_target NAME)
+     pico_simple_hardware_headers_target(${NAME})
+     pico_simple_hardware_impl_target(${NAME})
++    get_property(PICO_SDK_INTERFACES GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP)
++    set_property(GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP "hardware_${NAME};${PICO_SDK_INTERFACES}")
+ endmacro()
+ 
+ # create an INTERFACE library named target, and define LIB_TARGET=1 (upper case) as a compile option
+@@ -104,6 +106,8 @@ function(pico_add_impl_library target)
+         target_compile_definitions(${target} INTERFACE LIB_${TARGET_UPPER}=1)
+     endif()
+     target_link_libraries(${target} INTERFACE ${target}_headers)
++    get_property(PICO_SDK_INTERFACES GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP)
++    set_property(GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP "${target};${PICO_SDK_INTERFACES}")
+ endfunction()
+ 
+ # create an INTERFACE library named target along with associated header, and define LIB_TARGET=1 (upper case) as a compile option
+diff --git a/src/rp2040/boot_stage2/CMakeLists.txt b/src/rp2040/boot_stage2/CMakeLists.txt
+index ba42256..a977972 100644
+--- a/src/rp2040/boot_stage2/CMakeLists.txt
++++ b/src/rp2040/boot_stage2/CMakeLists.txt
+@@ -39,6 +39,9 @@ function(pico_define_boot_stage2 NAME SOURCES)
+             ${SOURCES}
+     )
+ 
++    # I hate this
++    string(REPLACE "--specs=nano.specs" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
++    string(REPLACE "--specs=nosys.specs" " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+     # todo bit of an abstraction failure - revisit for Clang support anyway
+     if (PICO_C_COMPILER_IS_CLANG)
+         target_link_options(${NAME} PRIVATE "-nostdlib")
+@@ -54,9 +57,6 @@ function(pico_define_boot_stage2 NAME SOURCES)
      target_link_options(${NAME} PRIVATE "LINKER:--script=${PICO_BOOT_STAGE2_DIR}/boot_stage2.ld")
      set_target_properties(${NAME} PROPERTIES LINK_DEPENDS ${PICO_BOOT_STAGE2_DIR}/boot_stage2.ld)
  
@@ -75,24 +129,49 @@ index e878ccc..74a4e67 100644
      set(ORIGINAL_BIN ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.bin)
      set(PADDED_CHECKSUMMED_ASM ${CMAKE_CURRENT_BINARY_DIR}/${NAME}_padded_checksummed.S)
  
--- 
-2.49.0
-
-
-From 1e3a9e432f438c6bb9ba541775b768a3be347226 Mon Sep 17 00:00:00 2001
-From: Shin Umeda <umeda.shin@gmail.com>
-Date: Sat, 26 Apr 2025 10:38:41 -0700
-Subject: [PATCH 04/10] fix headers not being included in certain subtargets
-
----
- src/rp2_common/pico_async_context/CMakeLists.txt  | 2 +-
- src/rp2_common/pico_clib_interface/CMakeLists.txt | 1 +
- src/rp2_common/pico_crt0/CMakeLists.txt           | 2 +-
- src/rp2_common/pico_printf/CMakeLists.txt         | 2 +-
- src/rp2_common/pico_stdio/CMakeLists.txt          | 1 +
- src/rp2_common/pico_stdio_rtt/CMakeLists.txt      | 2 +-
- 6 files changed, 6 insertions(+), 4 deletions(-)
-
+diff --git a/src/rp2350/boot_stage2/CMakeLists.txt b/src/rp2350/boot_stage2/CMakeLists.txt
+index e878ccc..8449ee2 100644
+--- a/src/rp2350/boot_stage2/CMakeLists.txt
++++ b/src/rp2350/boot_stage2/CMakeLists.txt
+@@ -38,12 +38,10 @@ function(pico_define_boot_stage2 NAME SOURCES)
+     add_executable(${NAME}
+             ${SOURCES}
+     )
+-
+     # todo bit of an abstraction failure - revisit for Clang support anyway
+     if (PICO_C_COMPILER_IS_CLANG)
+         target_link_options(${NAME} PRIVATE "-nostdlib")
+     elseif (PICO_C_COMPILER_IS_GNU)
+-        target_link_options(${NAME} PRIVATE "--specs=nosys.specs")
+         target_link_options(${NAME} PRIVATE "-nostartfiles")
+     endif ()
+ 
+@@ -54,9 +52,6 @@ function(pico_define_boot_stage2 NAME SOURCES)
+     target_link_options(${NAME} PRIVATE "LINKER:--script=${PICO_BOOT_STAGE2_DIR}/boot_stage2.ld")
+     set_target_properties(${NAME} PROPERTIES LINK_DEPENDS ${PICO_BOOT_STAGE2_DIR}/boot_stage2.ld)
+ 
+-    pico_add_dis_output(${NAME})
+-    pico_add_map_output(${NAME})
+-
+     set(ORIGINAL_BIN ${CMAKE_CURRENT_BINARY_DIR}/${NAME}.bin)
+     set(PADDED_CHECKSUMMED_ASM ${CMAKE_CURRENT_BINARY_DIR}/${NAME}_padded_checksummed.S)
+ 
+diff --git a/src/rp2_common/hardware_powman/CMakeLists.txt b/src/rp2_common/hardware_powman/CMakeLists.txt
+index 8653433..bc53512 100644
+--- a/src/rp2_common/hardware_powman/CMakeLists.txt
++++ b/src/rp2_common/hardware_powman/CMakeLists.txt
+@@ -1 +1,2 @@
+-pico_simple_hardware_target(powman)
+\ No newline at end of file
++pico_simple_hardware_target(powman)
++pico_mirrored_target_link_libraries(hardware_powman INTERFACE hardware_gpio)
+diff --git a/src/rp2_common/hardware_sync_spin_lock/CMakeLists.txt b/src/rp2_common/hardware_sync_spin_lock/CMakeLists.txt
+index 2427718..65e0452 100644
+--- a/src/rp2_common/hardware_sync_spin_lock/CMakeLists.txt
++++ b/src/rp2_common/hardware_sync_spin_lock/CMakeLists.txt
+@@ -1 +1,2 @@
+ pico_simple_hardware_target(sync_spin_lock)
++pico_mirrored_target_link_libraries(hardware_sync_spin_lock INTERFACE pico_runtime_init)
 diff --git a/src/rp2_common/pico_async_context/CMakeLists.txt b/src/rp2_common/pico_async_context/CMakeLists.txt
 index cb136aa..7ba1db9 100644
 --- a/src/rp2_common/pico_async_context/CMakeLists.txt
@@ -131,6 +210,18 @@ index bd41569..6b3c788 100644
  endif()
  
  pico_register_common_scope_var(PICO_LINKER_SCRIPT_PATH)
+diff --git a/src/rp2_common/pico_float/CMakeLists.txt b/src/rp2_common/pico_float/CMakeLists.txt
+index f634f09..2c72b05 100644
+--- a/src/rp2_common/pico_float/CMakeLists.txt
++++ b/src/rp2_common/pico_float/CMakeLists.txt
+@@ -7,6 +7,7 @@
+ 
+     target_include_directories(pico_float_headers SYSTEM INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
+ 
++    target_link_libraries(pico_float INTERFACE pico_bootrom)
+ 
+     # add alias "default" which is just pico.
+     add_library(pico_float_default INTERFACE)
 diff --git a/src/rp2_common/pico_printf/CMakeLists.txt b/src/rp2_common/pico_printf/CMakeLists.txt
 index c77bb08..332e780 100644
 --- a/src/rp2_common/pico_printf/CMakeLists.txt
@@ -166,251 +257,3 @@ index d503754..bab51ff 100644
  
 -pico_mirrored_target_link_libraries(pico_stdio_rtt INTERFACE pico_stdio)
 +pico_mirrored_target_link_libraries(pico_stdio_rtt INTERFACE pico_stdio pico_binary_info)
--- 
-2.49.0
-
-
-From c23f147d6da908c963f94e825f6096b84b037c1c Mon Sep 17 00:00:00 2001
-From: Shin Umeda <umeda.shin@gmail.com>
-Date: Sat, 26 Apr 2025 10:39:52 -0700
-Subject: [PATCH 05/10] build every library statically so it can be installed
-
----
- CMakeLists.txt                           | 29 ++++++++++++++++++++++++
- empty.c                                  |  1 +
- src/CMakeLists.txt                       |  2 ++
- src/rp2_common/pico_float/CMakeLists.txt |  1 +
- 4 files changed, 33 insertions(+)
- create mode 100644 empty.c
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2ecb515..174151f 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -68,4 +68,33 @@ if (NOT TARGET _pico_sdk_inclusion_marker)
-     if (NOT PICO_SDK_TOP_LEVEL_PROJECT)
-         pico_promote_common_scope_vars()
-     endif()
-+
-+    # Exclude pico_base because it's only header files
-+    # Exclude stdio bc we have our own console stuff. May wish to add it back in if I figure out config stuff
-+    set(exclude_list "pico_base;pico_stdio;pico_async_context_freertos;pico_float_pico")
-+    if(NOT BUILD_CLIB_LLVM)
-+        list(APPEND exclude_list "pico_llvm_libc_interface")
-+    endif()
-+    if(NOT BUILD_CLIB_NEWLIB)
-+        list(APPEND exclude_list "pico_newlib_interface")
-+    endif()
-+    if(NOT BUILD_CLIB_PICOLIBC)
-+        list(APPEND exclude_list "pico_picolibc_interface")
-+    endif()
-+
-+    get_property(PICO_SDK_INTERFACES GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP)
-+    foreach(PICO_TARGET ${PICO_SDK_INTERFACES})
-+        # We are not doing wireless
-+        if(PICO_TARGET IN_LIST exclude_list OR PICO_TARGET MATCHES "lwip|mbed|cyw43|btstack|cybt_shared_bus|tinyusb")
-+            continue()
-+        endif()
-+        # Do not build subdependencies bc it screws up the configruation
-+        if(PICO_TARGET IN_LIST exclude_list OR PICO_TARGET MATCHES "pico_divider_|pico_float_|pico_double_|pico_sync_")
-+            continue()
-+        endif()
-+        add_library(${PICO_TARGET}_dep STATIC empty.c)
-+        target_link_libraries(${PICO_TARGET}_dep PUBLIC ${PICO_TARGET} pico_base)
-+        install(TARGETS ${PICO_TARGET}_dep)
-+    endforeach()
-+    # message(STATUS "Installing targets ${PICO_SDK_INTERFACES}")
- endif()
-diff --git a/empty.c b/empty.c
-new file mode 100644
-index 0000000..2283e74
---- /dev/null
-+++ b/empty.c
-@@ -0,0 +1 @@
-+// does literally nothing
-\ No newline at end of file
-diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index f21db2d..a1a21c2 100644
---- a/src/CMakeLists.txt
-+++ b/src/CMakeLists.txt
-@@ -104,6 +104,8 @@ function(pico_add_impl_library target)
-         target_compile_definitions(${target} INTERFACE LIB_${TARGET_UPPER}=1)
-     endif()
-     target_link_libraries(${target} INTERFACE ${target}_headers)
-+    get_property(PICO_SDK_INTERFACES GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP)
-+    set_property(GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP "${target};${PICO_SDK_INTERFACES}")
- endfunction()
- 
- # create an INTERFACE library named target along with associated header, and define LIB_TARGET=1 (upper case) as a compile option
-diff --git a/src/rp2_common/pico_float/CMakeLists.txt b/src/rp2_common/pico_float/CMakeLists.txt
-index f634f09..2c72b05 100644
---- a/src/rp2_common/pico_float/CMakeLists.txt
-+++ b/src/rp2_common/pico_float/CMakeLists.txt
-@@ -7,6 +7,7 @@
- 
-     target_include_directories(pico_float_headers SYSTEM INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
- 
-+    target_link_libraries(pico_float INTERFACE pico_bootrom)
- 
-     # add alias "default" which is just pico.
-     add_library(pico_float_default INTERFACE)
--- 
-2.49.0
-
-
-From de7702893cc7c3999c212f594ca3c778ed6b4dd8 Mon Sep 17 00:00:00 2001
-From: Shin Umeda <umeda.shin@gmail.com>
-Date: Sat, 26 Apr 2025 18:22:58 -0700
-Subject: [PATCH 06/10] I think this was an error
-
----
- src/rp2350/boot_stage2/CMakeLists.txt | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/src/rp2350/boot_stage2/CMakeLists.txt b/src/rp2350/boot_stage2/CMakeLists.txt
-index 74a4e67..b77b5e3 100644
---- a/src/rp2350/boot_stage2/CMakeLists.txt
-+++ b/src/rp2350/boot_stage2/CMakeLists.txt
-@@ -30,7 +30,7 @@ pico_register_common_scope_var(PICO_DEFAULT_BOOT_STAGE2_FILE)
- # needed by function below
- set(PICO_BOOT_STAGE2_DIR "${CMAKE_CURRENT_LIST_DIR}" CACHE INTERNAL "")
- 
--pico_add_library(boot_stage2_headers)
-+pico_add_library(boot_stage2)
- target_include_directories(boot_stage2_headers SYSTEM INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
- 
- # by convention the first source file name without extension is used for the binary info name
--- 
-2.49.0
-
-
-From 516debb1702315ef0aebdb6e74dbc193a2413d9b Mon Sep 17 00:00:00 2001
-From: Shin Umeda <umeda.shin@gmail.com>
-Date: Mon, 28 Apr 2025 21:18:37 -0700
-Subject: [PATCH 07/10] we define our own toolchain and c standard
-
----
- CMakeLists.txt      | 3 ---
- pico_sdk_init.cmake | 4 ----
- 2 files changed, 7 deletions(-)
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 174151f..54a3913 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -32,9 +32,6 @@ if (NOT TARGET _pico_sdk_inclusion_marker)
- 
-     pico_is_top_level_project(PICO_SDK_TOP_LEVEL_PROJECT)
- 
--    set(CMAKE_C_STANDARD 11)
--    set(CMAKE_CXX_STANDARD 11)
--
-     if (NOT PICO_SDK_TOP_LEVEL_PROJECT)
-         set(PICO_SDK 1 PARENT_SCOPE)
-     endif()
-diff --git a/pico_sdk_init.cmake b/pico_sdk_init.cmake
-index b708b63..c67b055 100644
---- a/pico_sdk_init.cmake
-+++ b/pico_sdk_init.cmake
-@@ -86,8 +86,4 @@ if (NOT TARGET _pico_sdk_pre_init_marker)
-     endmacro()
- 
-     include(pico_pre_load_platform)
--
--    # We want to configure correct toolchain prior to project load
--    # todo perhaps this should be included by the platform instead?
--    include(pico_pre_load_toolchain)
- endif()
--- 
-2.49.0
-
-
-From 4c38e4a7b8fcd3493f597dcbbb9d60313623655b Mon Sep 17 00:00:00 2001
-From: Shin Umeda <umeda.shin@gmail.com>
-Date: Tue, 29 Apr 2025 19:10:04 -0700
-Subject: [PATCH 08/10] retrieve header file includes so it can be exported by
- conan
-
----
- CMakeLists.txt | 7 ++++++-
- 1 file changed, 6 insertions(+), 1 deletion(-)
-
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 54a3913..b1da132 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -89,9 +89,14 @@ if (NOT TARGET _pico_sdk_inclusion_marker)
-         if(PICO_TARGET IN_LIST exclude_list OR PICO_TARGET MATCHES "pico_divider_|pico_float_|pico_double_|pico_sync_")
-             continue()
-         endif()
-+        get_target_property(include_dir ${PICO_TARGET}_headers INTERFACE_INCLUDE_DIRECTORIES)
-+        if(include_dir)
-+            list(APPEND include_dirs ${include_dir})
-+        endif()
-         add_library(${PICO_TARGET}_dep STATIC empty.c)
-         target_link_libraries(${PICO_TARGET}_dep PUBLIC ${PICO_TARGET} pico_base)
-         install(TARGETS ${PICO_TARGET}_dep)
-     endforeach()
--    # message(STATUS "Installing targets ${PICO_SDK_INTERFACES}")
-+    message(STATUS "Writing list of include directories to file")
-+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/INCLUDELIST.txt "${include_dirs}")
- endif()
--- 
-2.49.0
-
-
-From eab211f0166465d2aff763c6146eb101b571ecd5 Mon Sep 17 00:00:00 2001
-From: Shin Umeda <umeda.shin@gmail.com>
-Date: Tue, 29 Apr 2025 19:30:39 -0700
-Subject: [PATCH 09/10] Add hardware libraries to list
-
----
- src/CMakeLists.txt | 2 ++
- 1 file changed, 2 insertions(+)
-
-diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index a1a21c2..86fea90 100644
---- a/src/CMakeLists.txt
-+++ b/src/CMakeLists.txt
-@@ -88,6 +88,8 @@ endfunction()
- macro(pico_simple_hardware_target NAME)
-     pico_simple_hardware_headers_target(${NAME})
-     pico_simple_hardware_impl_target(${NAME})
-+    get_property(PICO_SDK_INTERFACES GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP)
-+    set_property(GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP "hardware_${NAME};${PICO_SDK_INTERFACES}")
- endmacro()
- 
- # create an INTERFACE library named target, and define LIB_TARGET=1 (upper case) as a compile option
--- 
-2.49.0
-
-
-From e85601a206c63f8f83fa96015d8de57994bd1270 Mon Sep 17 00:00:00 2001
-From: Shin Umeda <umeda.shin@gmail.com>
-Date: Tue, 29 Apr 2025 19:34:43 -0700
-Subject: [PATCH 10/10] fix dependencies
-
----
- src/rp2_common/hardware_powman/CMakeLists.txt         | 3 ++-
- src/rp2_common/hardware_sync_spin_lock/CMakeLists.txt | 1 +
- 2 files changed, 3 insertions(+), 1 deletion(-)
-
-diff --git a/src/rp2_common/hardware_powman/CMakeLists.txt b/src/rp2_common/hardware_powman/CMakeLists.txt
-index 8653433..bc53512 100644
---- a/src/rp2_common/hardware_powman/CMakeLists.txt
-+++ b/src/rp2_common/hardware_powman/CMakeLists.txt
-@@ -1 +1,2 @@
--pico_simple_hardware_target(powman)
-\ No newline at end of file
-+pico_simple_hardware_target(powman)
-+pico_mirrored_target_link_libraries(hardware_powman INTERFACE hardware_gpio)
-diff --git a/src/rp2_common/hardware_sync_spin_lock/CMakeLists.txt b/src/rp2_common/hardware_sync_spin_lock/CMakeLists.txt
-index 2427718..65e0452 100644
---- a/src/rp2_common/hardware_sync_spin_lock/CMakeLists.txt
-+++ b/src/rp2_common/hardware_sync_spin_lock/CMakeLists.txt
-@@ -1 +1,2 @@
- pico_simple_hardware_target(sync_spin_lock)
-+pico_mirrored_target_link_libraries(hardware_sync_spin_lock INTERFACE pico_runtime_init)
--- 
-2.49.0
-

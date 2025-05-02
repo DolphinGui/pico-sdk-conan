@@ -2,7 +2,7 @@
 build_type=MinSizeRel
 os=baremetal
 arch=cortex-m33
-libc=custom
+
 
 [options]
 *:platform=rp2350-arm-s
@@ -10,3 +10,5 @@ libc=custom
 CC=arm-none-eabi-gcc
 CXX=arm-none-eabi-g++
 LD=arm-none-eabi-ld
+[conf]
+tools.cmake.cmaketoolchain:generator=Ninja
