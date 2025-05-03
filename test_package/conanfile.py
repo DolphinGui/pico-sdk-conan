@@ -28,7 +28,9 @@ class CompressorRecipe(ConanFile):
             "PICO_SDK_PATH": os.path.join(self.build_folder, "sdk"), 
             "CMAKE_ASM_FLAGS_INIT": "-mcpu=cortex-m33 -mfloat-abi=soft",
             # "PICO_PLATFORM": "rp2350-arm-s",
-            "PICO_BOARD": "adafruit_feather_rp2350"
+            # For some reason even if I set PICO_FLASH_SIZE with PICO_BOARD=none,
+            # it still doesn't work. I can't explain why.
+            "PICO_BOARD": "adafruit_feather_rp2350",
         }
         cmake.configure(variables = defs)
         cmake.build()
