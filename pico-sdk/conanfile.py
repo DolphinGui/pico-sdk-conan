@@ -2,10 +2,10 @@ from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 from conan.tools.files import collect_libs
 from conan.tools.files import get, replace_in_file, patch, load, copy
-import os
+from os.path import join
 
 class PicoSDK(ConanFile):
-    name = "raspberry_pi_pico_sdk"
+    name = "picosdk"
     version = "2.1.1"
     package_type = "static-library"
 
@@ -17,8 +17,8 @@ class PicoSDK(ConanFile):
     topics = ("Embedded", "Raspberry Pi Pico", "ARM")
 
     settings = "os", "compiler", "build_type", "arch"
-    options = {"platform": ["rp2350-arm-s", "rp2040"]}
-    default_options = {"platform": "rp2350-arm-s"}
+    options = {}
+    default_options = {}
 
     exports_sources = "patches/*"
 
@@ -33,7 +33,7 @@ class PicoSDK(ConanFile):
     
     def source(self):
         get(self, **self.conan_data["sources"][self.version])
-        patch_file = os.path.join(self.export_sources_folder, "patches/2.1.1-psdk.patch")
+        patch_file = join(self.export_sources_folder, "patches/2.1.1-psdk.patch")
         patch(self, patch_file=patch_file)
 
     def generate(self):
@@ -43,25 +43,10 @@ class PicoSDK(ConanFile):
         tc.generate()
 
     def build(self):
-        cmake = CMake(self)
-        # Eventually add option to define PICO_BOOT_STAGE2_CHOOSE_W25Q080
-        defs = {"PICO_BOARD": "none", 
-            "PICO_PLATFORM": self.options.get_safe("platform"),
-            "PICO_SDK_TESTS_ENABLED": "0",
-            "CMAKE_TRY_COMPILE_TARGET_TYPE": "STATIC_LIBRARY",
-            "PICO_FLASH_SIZE_BYTES" : "1024 * 1024 * 2",
-            "CMAKE_EXPORT_COMPILE_COMMANDS": "On"
-        }
-        cmake.configure(variables = defs)
-        cmake.build()
+        pass
 
     def package(self):
-        cmake = CMake(self)
-        cmake.install()
-        include_list = load(self, 'INCLUDELIST.txt')
-        package_include =  os.path.join(self.package_folder, "include")
-        for include in include_list.split(';'):
-            copy(self, "*", include, package_include)
-
+        copy(self, "*", self.export_sources_folder, self.package_folder)
+        
     def package_info(self):
         pass

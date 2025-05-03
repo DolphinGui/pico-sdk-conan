@@ -1,12 +1,16 @@
 cmake_minimum_required(VERSION 3.15)
 
-set(CMAKE_TOOLCHAIN_FILE build/conan_toolchain.cmake)
+include(${CMAKE_BINARY_DIR}/sdk/external/pico_sdk_import.cmake)
 
-project(test_package C CXX)
+project(raspberry_pico_test C CXX ASM)
 
-find_package(raspberry_pi_pico_sdk REQUIRED)
+pico_sdk_init()
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+add_executable(main.elf main.cpp)
 
-add_executable(test_package main.cpp)
+target_compile_options(main.elf PRIVATE -Wall -Werror)
+target_link_libraries(main.elf pico_stdlib hardware_gpio)
 
-target_link_libraries(test_package raspberry_pi_pico_sdk::raspberry_pi_pico_sdk)
-
+# pico_add_extra_outputs(main)
+pico_enable_stdio_usb(main.elf 1)
+pico_enable_stdio_uart(main.elf 0)

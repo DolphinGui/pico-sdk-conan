@@ -2,7 +2,7 @@
 build_type=MinSizeRel
 os=baremetal
 arch=cortex-m33
-
+build_type=RelWithDebInfo
 
 [options]
 *:platform=rp2350-arm-s
