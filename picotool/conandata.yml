@@ -1,0 +1,8 @@
+picotool_sources:
+  "2.1.1":
+    url: "https://github.com/raspberrypi/picotool/releases/download/2.1.1/picotool-2.1.1.tar.gz"
+    sha256: "05da23cfb6e648895c1ed3a72597d22a9219c1797f10da3a9850830aa6cc4ddd"
+sdk_sources:
+  "2.1.1":
+    url: "https://github.com/raspberrypi/pico-sdk/releases/download/2.1.1/pico-sdk-2.1.1.tar.gz"
+    sha256: "27bf8ace9e3a33a6c46c1870040de1466f40791f54974a4f3d582c3544e6b53f"

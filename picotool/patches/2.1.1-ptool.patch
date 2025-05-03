@@ -1,0 +1,89 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 999b9a0..cb249c7 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -49,12 +49,6 @@ configure_file(data_locs.template.cpp ${CMAKE_CURRENT_BINARY_DIR}/data_locs.cpp)
+ 
+ include(ExternalProject)
+ 
+-if (MSVC)
+-    set(CMAKE_CXX_STANDARD 20)
+-else()
+-    set(CMAKE_CXX_STANDARD 14)
+-endif()
+-
+ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+ 
+ if (NOT PICOTOOL_NO_LIBUSB)
+@@ -203,10 +197,7 @@ add_subdirectory(picoboot_connection)
+ add_subdirectory(elf)
+ add_subdirectory(elf2uf2)
+ 
+-# To configure mbedtls
+-# todo make the configuration better
+-set(MBEDTLS_CONFIG_FILE "mbedtls_config.h")
+-add_compile_options(-I${CMAKE_SOURCE_DIR}/lib/include)
++find_package(MbedTLS REQUIRED)
+ 
+ add_subdirectory(lib)
+ 
+@@ -269,12 +260,9 @@ target_link_libraries(picotool
+         nlohmann_json
+         whereami)
+ 
+-if (NOT TARGET mbedtls)
+-    message("mbedtls not found - no signing/hashing support will be built")
+-    target_compile_definitions(picotool PRIVATE HAS_MBEDTLS=0)
+-else()
+-    target_compile_definitions(picotool PRIVATE HAS_MBEDTLS=1)
+-endif()
++target_compile_definitions(picotool PRIVATE HAS_MBEDTLS=1)
++target_link_libraries(picotool MbedTLS::mbedtls MbedTLS::mbedcrypto)
++
+ 
+ if (NOT LIBUSB_FOUND)
+     if (PICOTOOL_NO_LIBUSB)
+@@ -290,7 +278,7 @@ else()
+     target_compile_definitions(picotool PRIVATE HAS_LIBUSB=1)
+     target_link_libraries(picotool 
+         picoboot_connection_cxx
+-        ${LIBUSB_LIBRARIES})
++        libusb::libusb)
+ endif()
+ 
+ # allow `make install`
+diff --git a/bintool/CMakeLists.txt b/bintool/CMakeLists.txt
+index 4e3edb5..64a2d47 100644
+--- a/bintool/CMakeLists.txt
++++ b/bintool/CMakeLists.txt
+@@ -1,19 +1,4 @@
+-if (NOT TARGET mbedtls)
+-    message("lib/mbedtls submodule needs to be initialized for bintool hashing/signing")
+-    add_library(bintool STATIC
+-            bintool.cpp)
+-    target_compile_definitions(bintool PRIVATE
+-            NO_PICO_PLATFORM=1
+-            HAS_MBEDTLS=0
+-            )
+-
+-    target_include_directories(bintool PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+ 
+-    target_link_libraries(bintool PUBLIC
+-            elf
+-            errors
+-            boot_picobin_headers)
+-else()
+     add_library(bintool STATIC
+             bintool.cpp
+             mbedtls_wrapper.c)
+@@ -25,8 +10,8 @@ else()
+     target_include_directories(bintool PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+ 
+     target_link_libraries(bintool PUBLIC
+-            mbedtls
++            MbedTLS::mbedtls
+             elf
+             errors
+             boot_picobin_headers)
+-endif()
++
