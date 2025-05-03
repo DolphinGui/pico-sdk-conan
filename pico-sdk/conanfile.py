@@ -1,7 +1,7 @@
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 from conan.tools.files import collect_libs
-from conan.tools.files import get, replace_in_file, patch, load, copy
+from conan.tools.files import get, replace_in_file, patch, load, copy, chdir
 from os.path import join
 
 class PicoSDK(ConanFile):
@@ -32,9 +32,11 @@ class PicoSDK(ConanFile):
         cmake_layout(self)
     
     def source(self):
-        get(self, **self.conan_data["sources"][self.version])
+        get(self, **self.conan_data["sources"][self.version]["sdk"])
         patch_file = join(self.export_sources_folder, "patches/2.1.1-psdk.patch")
         patch(self, patch_file=patch_file)
+        with chdir(self, "lib"):
+            get(self, **self.conan_data["sources"][self.version]["tinyusb"], destination = "tinyusb", strip_root = True)
 
     def generate(self):
         deps = CMakeDeps(self)

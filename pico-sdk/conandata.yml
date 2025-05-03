@@ -1,4 +1,9 @@
 sources:
   "2.1.1":
-    url: "https://github.com/raspberrypi/pico-sdk/releases/download/2.1.1/pico-sdk-2.1.1.tar.gz"
-    sha256: "27bf8ace9e3a33a6c46c1870040de1466f40791f54974a4f3d582c3544e6b53f"
+    sdk:
+      url: "https://github.com/raspberrypi/pico-sdk/releases/download/2.1.1/pico-sdk-2.1.1.tar.gz"
+      sha256: "27bf8ace9e3a33a6c46c1870040de1466f40791f54974a4f3d582c3544e6b53f"
+    tinyusb:
+      url: "https://github.com/hathach/tinyusb/archive/refs/tags/0.18.0.tar.gz"
+      sha256: "e7fa1bd723213749a0362c79eaccc99e84c8adea8f0a63588c4e4812608b7aa9"
+
