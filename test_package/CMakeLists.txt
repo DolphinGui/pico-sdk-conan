@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.15)
 set(CMAKE_EXECUTABLE_SUFFIX_ASM .elf)
 set(CMAKE_EXECUTABLE_SUFFIX_C .elf)
 set(CMAKE_EXECUTABLE_SUFFIX_CXX .elf)
-include(${PICO_SDK_PATH}/external/pico_sdk_import.cmake)
+
+include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 project(raspberry_pico_test C CXX ASM)
 

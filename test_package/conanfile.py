@@ -16,9 +16,7 @@ class CompressorRecipe(ConanFile):
         self.tool_requires("picotool/2.1.1")
     
     def generate(self):
-        # copy(self, "*", self.dependencies["picosdk"].package_folder, os.path.join(self.build_folder, "sdk"))
         tc = CMakeToolchain(self)
-        tc.variables["PICO_SDK_PATH"] =  self.dependencies["picosdk"].package_folder
         tc.generate()
         deps = CMakeDeps(self)
         deps.generate()
@@ -26,7 +24,6 @@ class CompressorRecipe(ConanFile):
     def build(self):
         cmake = CMake(self)
         defs = {
-            # "PICO_SDK_PATH": os.path.join(self.build_folder, "sdk"), 
             "CMAKE_ASM_FLAGS_INIT": "-mcpu=cortex-m33 -mfloat-abi=soft",
             # "PICO_PLATFORM": "rp2350-arm-s",
             # For some reason even if I set PICO_FLASH_SIZE with PICO_BOARD=none,

@@ -21,15 +21,6 @@ class PicoSDK(ConanFile):
     default_options = {}
 
     exports_sources = "patches/*"
-
-    def config_options(self):
-        pass
-
-    def configure(self):
-        pass
-
-    def layout(self):
-        cmake_layout(self)
     
     def source(self):
         get(self, **self.conan_data["sources"][self.version]["sdk"])
@@ -38,17 +29,9 @@ class PicoSDK(ConanFile):
         with chdir(self, "lib"):
             get(self, **self.conan_data["sources"][self.version]["tinyusb"], destination = "tinyusb", strip_root = True)
 
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.generate()
-
-    def build(self):
-        pass
-
     def package(self):
         copy(self, "*", self.export_sources_folder, self.package_folder)
         
     def package_info(self):
-        pass
+        self.buildenv_info.define("PICO_SDK_PATH", self.package_folder)
+
