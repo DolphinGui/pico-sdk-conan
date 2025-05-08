@@ -34,4 +34,9 @@ class PicoSDK(ConanFile):
         
     def package_info(self):
         self.buildenv_info.define("PICO_SDK_PATH", self.package_folder)
+        self.cpp_info.includedirs = []  # no actual include directories
+        self.cpp_info.libdirs = [] # nothing is being built
+
+    def package_id(self):
+        self.info.settings.clear()
 
