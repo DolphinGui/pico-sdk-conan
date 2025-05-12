@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 set(CMAKE_EXECUTABLE_SUFFIX_ASM .elf)
 set(CMAKE_EXECUTABLE_SUFFIX_C .elf)
 set(CMAKE_EXECUTABLE_SUFFIX_CXX .elf)
+set(PICO_CXX_ENABLE_EXCEPTIONS On)
 
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
