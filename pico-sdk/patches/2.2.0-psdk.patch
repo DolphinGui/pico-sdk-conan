@@ -1,0 +1,61 @@
+diff --git a/src/rp2040/boot_stage2/CMakeLists.txt b/src/rp2040/boot_stage2/CMakeLists.txt
+index a977972..9a852a8 100644
+--- a/src/rp2040/boot_stage2/CMakeLists.txt
++++ b/src/rp2040/boot_stage2/CMakeLists.txt
+@@ -46,7 +46,6 @@ function(pico_define_boot_stage2 NAME SOURCES)
+     if (PICO_C_COMPILER_IS_CLANG)
+         target_link_options(${NAME} PRIVATE "-nostdlib")
+     elseif (PICO_C_COMPILER_IS_GNU)
+-        target_link_options(${NAME} PRIVATE "--specs=nosys.specs")
+         target_link_options(${NAME} PRIVATE "-nostartfiles")
+     endif ()
+ 
+diff --git a/src/rp2_common/pico_runtime/CMakeLists.txt b/src/rp2_common/pico_runtime/CMakeLists.txt
+index da329e6..ee08f96 100644
+--- a/src/rp2_common/pico_runtime/CMakeLists.txt
++++ b/src/rp2_common/pico_runtime/CMakeLists.txt
+@@ -44,12 +44,6 @@ foreach(LIB IN LISTS PICO_RUNTIME_LIBRARIES)
+     endif()
+ endforeach()
+ 
+-# todo is this correct/needed?
+-if (PICO_C_COMPILER_IS_GNU)
+-    target_link_options(pico_runtime INTERFACE "--specs=nosys.specs")
+-elseif (PICO_C_COMPILER_IS_CLANG)
+-   # target_link_options(pico_runtime INTERFACE "-nostdlib")
+-endif()
+ 
+ # pico_minimize_runtime((INCLUDE ...) (EXCLUDE ...))
+ #
+@@ -144,4 +138,4 @@ function(pico_minimize_runtime TARGET)
+     if (NOT RUNTIME_INCLUDE_FPGA_CHECK)
+         target_compile_definitions(${TARGET} PRIVATE PICO_NO_FPGA_CHECK=1)
+     endif()
+-endfunction()
+\ No newline at end of file
++endfunction()
+diff --git a/src/rp2_common/pico_standard_link/CMakeLists.txt b/src/rp2_common/pico_standard_link/CMakeLists.txt
+index a428eb6..72147f4 100644
+--- a/src/rp2_common/pico_standard_link/CMakeLists.txt
++++ b/src/rp2_common/pico_standard_link/CMakeLists.txt
+@@ -59,15 +59,14 @@ if (NOT TARGET pico_standard_link)
+     set(PICO_FLASH_SIZE_BYTES_STRING "${PICO_FLASH_SIZE_BYTES}")
+     configure_file(${CMAKE_CURRENT_LIST_DIR}/pico_flash_region.template.ld ${CMAKE_BINARY_DIR}/pico_flash_region.ld)
+     # add include path for linker scripts
+-    target_link_options(pico_standard_link INTERFACE "LINKER:-L${CMAKE_BINARY_DIR}")
++    target_link_options(pico_standard_link INTERFACE "-L${CMAKE_BINARY_DIR}")
++    target_link_options(pico_standard_link INTERFACE "-L${PICO_LINKER_SCRIPT_PATH}")
+ 
+     # LINKER script will be PICO_TARGET_LINKER_SCRIPT if set on target, or ${CMAKE_CURRENT_LIST_DIR}/memmap_foo.ld
+     # if PICO_TARGET_BINARY_TYPE is set to foo on the target, otherwise ${CMAKE_CURRENT_LIST_DIR}/memmap_${PICO_DEFAULT_BINARY_TYPE).ld
+-    set(_LINKER_SCRIPT_EXPRESSION "$<IF:$<BOOL:$<TARGET_PROPERTY:PICO_TARGET_LINKER_SCRIPT>>,$<TARGET_PROPERTY:PICO_TARGET_LINKER_SCRIPT>,${PICO_LINKER_SCRIPT_PATH}/memmap_$<IF:$<STREQUAL:$<TARGET_PROPERTY:PICO_TARGET_BINARY_TYPE>,>,${PICO_DEFAULT_BINARY_TYPE},$<TARGET_PROPERTY:PICO_TARGET_BINARY_TYPE>>.ld>")
+-    target_link_options(pico_standard_link INTERFACE
+-        "LINKER:--script=${_LINKER_SCRIPT_EXPRESSION}"
+-            )
+-    pico_add_link_depend(pico_standard_link ${_LINKER_SCRIPT_EXPRESSION})
++    set(_LINKER_SCRIPT_EXPRESSION "$<IF:$<BOOL:$<TARGET_PROPERTY:PICO_TARGET_LINKER_SCRIPT>>,$<TARGET_PROPERTY:PICO_TARGET_LINKER_SCRIPT>,memmap_$<IF:$<STREQUAL:$<TARGET_PROPERTY:PICO_TARGET_BINARY_TYPE>,>,${PICO_DEFAULT_BINARY_TYPE},$<TARGET_PROPERTY:PICO_TARGET_BINARY_TYPE>>.ld>")
++    target_link_options(pico_standard_link INTERFACE "-T${_LINKER_SCRIPT_EXPRESSION}")
++    pico_add_link_depend(pico_standard_link ${PICO_LINKER_SCRIPT_PATH}/${_LINKER_SCRIPT_EXPRESSION})
+     unset(_LINKER_SCRIPT_EXPRESSION)
+ 
+     # PICO_NO_FLASH will be set based on PICO_TARGET_BUILD_TYPE target property being equal to no_flash if set, otherwise to the value of the PICO_NO_FLASH cmake variable unless PICO_TARGET_TYPE is set to something else

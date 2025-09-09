@@ -1,9 +1,7 @@
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
-from conan.tools.files import collect_libs
-from conan.tools.files import get, replace_in_file, patch, load, copy, mkdir, chdir, rename, rmdir
+from conan.tools.files import get, patch, chdir
 from os.path import join
-import shutil
 
 class Picotool(ConanFile):
     name = "picotool"
@@ -11,7 +9,7 @@ class Picotool(ConanFile):
     package_type = "application"
 
     license = "BSD-3"
-    author = "<Put your name here> <And your email here>"
+    author = "<Shin Umeda> <umeda.shin@gmail.com>"
     url = "https://github.com/DolphinGui/pico-sdk-libhal"
     description = "The Raspberry Pi Picotool repackaged for conan"
     topics = ("Embedded", "Raspberry Pi Pico", "ARM")

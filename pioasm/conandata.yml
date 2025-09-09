@@ -2,3 +2,6 @@ sources:
   "2.1.1":
     url: "https://github.com/raspberrypi/pico-sdk/releases/download/2.1.1/pico-sdk-2.1.1.tar.gz"
     sha256: "27bf8ace9e3a33a6c46c1870040de1466f40791f54974a4f3d582c3544e6b53f"
+  "2.2.0":
+    url: "https://github.com/raspberrypi/pico-sdk/releases/download/2.2.0/pico-sdk-2.2.0.tar.gz"
+    sha256: "2678fe2b176cf64a7f71cd91749fdf9134c8cf7ff84b7199dfe5ea0d6dba6fa4"

@@ -1,7 +1,5 @@
 from conan import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
-from conan.tools.files import collect_libs
-from conan.tools.files import get, replace_in_file, patch, load, copy, chdir
+from conan.tools.files import get, patch, copy, chdir
 from os.path import join
 
 class PicoSDK(ConanFile):
@@ -11,7 +9,7 @@ class PicoSDK(ConanFile):
 
     # Optional metadata
     license = "BSD-3"
-    author = "<Put your name here> <And your email here>"
+    author = "<Shin Umeda> <umeda.shin@gmail.com>"
     url = "https://github.com/DolphinGui/pico-sdk-libhal"
     description = "The Raspberry Pi Pico C/C++ SDK repackaged for conan"
     topics = ("Embedded", "Raspberry Pi Pico", "ARM")

@@ -1,18 +1,17 @@
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
-from conan.tools.files import collect_libs
-from conan.tools.files import get, replace_in_file, patch, load, copy, mkdir, chdir, rename, rmdir
+from conan.tools.files import get, patch, chdir, rmdir
 import os
 import shutil
 
 class PioASM(ConanFile):
     name = "pioasm"
-    version = "2.1.1"
+    version = "2.2.0"
     package_type = "application"
 
     # Optional metadata
     license = "BSD-3"
-    author = "<Put your name here> <And your email here>"
+    author = "<Shin Umeda> <umeda.shin@gmail.com>"
     url = "https://github.com/DolphinGui/pico-sdk-libhal"
     description = "The Raspberry Pi Pico Pio Assembler repackaged for conan"
     topics = ("Embedded", "Raspberry Pi Pico", "ARM")
@@ -37,9 +36,9 @@ class PioASM(ConanFile):
         cmake_layout(self)
     
     def source(self):
-        get(self, **self.conan_data["sources"][self.version], destination = 'sdkroot')
-        patch_file = os.path.join(self.export_sources_folder, "patches/2.1.1-pioasm.patch")
-        patch(self, patch_file=patch_file, base_path = 'sdkroot')
+        get(self, **self.conan_data["sources"][self.version], destination = 'sdkroot', strip_root = True)
+        patch_file = os.path.join(self.export_sources_folder, f"patches/{self.version}-pioasm.patch")
+        patch(self, patch_file=patch_file, base_path = './sdkroot')
         with chdir(self, "./sdkroot/tools/pioasm"):
             destination = self.source_folder
             files_list = os.listdir('.')
@@ -51,6 +50,7 @@ class PioASM(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
+        tc.cache_variables['PIOASM_VERSION_STRING'] = str(self.version)
         tc.generate()
 
     def build(self):
