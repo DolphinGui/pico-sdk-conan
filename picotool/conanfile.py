@@ -5,7 +5,6 @@ from os.path import join
 
 class Picotool(ConanFile):
     name = "picotool"
-    version = "2.2.0"
     package_type = "application"
 
     license = "BSD-3"
@@ -34,9 +33,10 @@ class Picotool(ConanFile):
         cmake_layout(self, src_folder = 'picotool')
     
     def source(self):
+        strip = not self.version.startswith('2.1') # only 2.2.0 and on have normal directories
         with chdir(self, ".."):
             # Downloading two sources is kinda bad, but unfortunately picotool requires the sdk for some reason
-            get(self, **self.conan_data["picotool_sources"][self.version], destination = 'picotool', strip_root = True)
+            get(self, **self.conan_data["picotool_sources"][self.version], destination = 'picotool', strip_root = strip)
             patch_file = join(self.export_sources_folder, f"patches/{self.version}-ptool.patch")
             patch(self, patch_file=patch_file, base_path = join(self.export_sources_folder, "picotool"))
 

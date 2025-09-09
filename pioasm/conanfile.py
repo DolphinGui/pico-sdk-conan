@@ -6,7 +6,6 @@ import shutil
 
 class PioASM(ConanFile):
     name = "pioasm"
-    version = "2.2.0"
     package_type = "application"
 
     # Optional metadata
@@ -36,7 +35,7 @@ class PioASM(ConanFile):
         cmake_layout(self)
     
     def source(self):
-        get(self, **self.conan_data["sources"][self.version], destination = 'sdkroot', strip_root = True)
+        get(self, **self.conan_data["sources"][self.version], destination = 'sdkroot', strip_root = not self.version.startswith('2.1'))
         patch_file = os.path.join(self.export_sources_folder, f"patches/{self.version}-pioasm.patch")
         patch(self, patch_file=patch_file, base_path = './sdkroot')
         with chdir(self, "./sdkroot/tools/pioasm"):
