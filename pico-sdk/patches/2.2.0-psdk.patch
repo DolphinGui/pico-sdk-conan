@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2ecb515..8cb66e5 100644
+index 2ecb515..6eaf22c 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -32,9 +32,6 @@ if (NOT TARGET _pico_sdk_inclusion_marker)
@@ -12,64 +12,6 @@ index 2ecb515..8cb66e5 100644
      if (NOT PICO_SDK_TOP_LEVEL_PROJECT)
          set(PICO_SDK 1 PARENT_SCOPE)
      endif()
-@@ -68,4 +65,49 @@ if (NOT TARGET _pico_sdk_inclusion_marker)
-     if (NOT PICO_SDK_TOP_LEVEL_PROJECT)
-         pico_promote_common_scope_vars()
-     endif()
-+
-+    set(exclude_list "pico_async_context_freertos")
-+    if(NOT BUILD_CLIB_LLVM)
-+        list(APPEND exclude_list "pico_llvm_libc_interface")
-+    endif()
-+    if(NOT BUILD_CLIB_NEWLIB)
-+        list(APPEND exclude_list "pico_newlib_interface")
-+    endif()
-+    if(NOT BUILD_CLIB_PICOLIBC)
-+        list(APPEND exclude_list "pico_picolibc_interface")
-+    endif()
-+
-+    get_property(PICO_SDK_INTERFACES GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP)
-+    # No I don't know why these two libraries are different
-+    list(APPEND PICO_SDK_INTERFACES "hardware_regs" "hardware_structs" "hardware_base" "bs2_default_library")
-+    foreach(PICO_TARGET ${PICO_SDK_INTERFACES})
-+        message(STATUS "Checking ${PICO_TARGET}")
-+        if(PICO_TARGET IN_LIST exclude_list 
-+            # We are not doing wireless
-+            OR PICO_TARGET MATCHES "lwip|mbed|cyw43|btstack|cybt_shared_bus|tinyusb"
-+            # Do not build subdependencies bc it screws up the configruation
-+            OR PICO_TARGET MATCHES "pico_divider_|pico_float_|pico_double_|pico_sync_"
-+            # Ignore internal bootloader targets
-+            OR PICO_TARGET MATCHES "boot_stage2")
-+
-+            continue()
-+        endif()
-+        
-+        if(TARGET ${PICO_TARGET}_headers)
-+            get_target_property(include_dir ${PICO_TARGET}_headers INTERFACE_INCLUDE_DIRECTORIES)
-+            get_target_property(include_dir_sys ${PICO_TARGET}_headers INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
-+            if(include_dir_sys)
-+                list(APPEND include_dir ${include_dir_sys})
-+            endif()
-+        endif()
-+        if(include_dir)
-+            list(APPEND include_dirs ${include_dir})
-+        endif()
-+        get_target_property(sources ${PICO_TARGET} INTERFACE_SOURCES )
-+        add_library(${PICO_TARGET}_dep STATIC empty.c)
-+        target_link_libraries(${PICO_TARGET}_dep PUBLIC ${PICO_TARGET} pico_base)
-+        install(TARGETS ${PICO_TARGET}_dep)
-+    endforeach()
-+    message(STATUS "Writing list of include directories to file")
-+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/INCLUDELIST.txt "${include_dirs}")
- endif()
-diff --git a/empty.c b/empty.c
-new file mode 100644
-index 0000000..2283e74
---- /dev/null
-+++ b/empty.c
-@@ -0,0 +1 @@
-+// does literally nothing
-\ No newline at end of file
 diff --git a/pico_sdk_init.cmake b/pico_sdk_init.cmake
 index b708b63..c67b055 100644
 --- a/pico_sdk_init.cmake
@@ -84,27 +26,16 @@ index b708b63..c67b055 100644
 -    include(pico_pre_load_toolchain)
  endif()
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 65b1d8c..e93065e 100644
+index 65b1d8c..8b5f86c 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -87,6 +87,8 @@ endfunction()
- macro(pico_simple_hardware_target NAME)
-     pico_simple_hardware_headers_target(${NAME})
-     pico_simple_hardware_impl_target(${NAME})
-+    get_property(PICO_SDK_INTERFACES GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP)
-+    set_property(GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP "hardware_${NAME};${PICO_SDK_INTERFACES}")
- endmacro()
+@@ -199,4 +199,4 @@ endfunction()
  
- # create an INTERFACE library named target, and define LIB_TARGET=1 (upper case) as a compile option
-@@ -103,6 +105,8 @@ function(pico_add_impl_library target)
-         target_compile_definitions(${target} INTERFACE LIB_${TARGET_UPPER}=1)
-     endif()
-     target_link_libraries(${target} INTERFACE ${target}_headers)
-+    get_property(PICO_SDK_INTERFACES GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP)
-+    set_property(GLOBAL PROPERTY PICO_SDK_INTERFACES_PROP "${target};${PICO_SDK_INTERFACES}")
- endfunction()
+ include(${PICO_PLATFORM_CMAKE_FILE})
  
- # create an INTERFACE library named target along with associated header, and define LIB_TARGET=1 (upper case) as a compile option
+-pico_promote_common_scope_vars()
+\ No newline at end of file
++pico_promote_common_scope_vars()
 diff --git a/src/rp2040/boot_stage2/CMakeLists.txt b/src/rp2040/boot_stage2/CMakeLists.txt
 index 2798b36..5c187d6 100644
 --- a/src/rp2040/boot_stage2/CMakeLists.txt
@@ -135,10 +66,16 @@ index 2798b36..5c187d6 100644
      set(PADDED_CHECKSUMMED_ASM ${CMAKE_CURRENT_BINARY_DIR}/${NAME}_padded_checksummed.S)
  
 diff --git a/src/rp2350/boot_stage2/CMakeLists.txt b/src/rp2350/boot_stage2/CMakeLists.txt
-index fbf95b5..9f7363a 100644
+index fbf95b5..20ad6cd 100644
 --- a/src/rp2350/boot_stage2/CMakeLists.txt
 +++ b/src/rp2350/boot_stage2/CMakeLists.txt
-@@ -44,12 +44,10 @@ function(pico_define_boot_stage2 NAME SOURCES)
+@@ -41,15 +41,16 @@ target_include_directories(boot_stage2_headers SYSTEM INTERFACE ${CMAKE_CURRENT_
+ # \param\ NAME The name of the boot stage 2 target
+ # \param\ SOURCES The source files to link into the boot stage 2
+ function(pico_define_boot_stage2 NAME SOURCES)
++    if(DO_NOT_BUILD_BOOT_HAL)
++    return()
++    endif()
      add_executable(${NAME}
              ${SOURCES}
      )
@@ -151,7 +88,7 @@ index fbf95b5..9f7363a 100644
          target_link_options(${NAME} PRIVATE "-nostartfiles")
      endif ()
  
-@@ -60,9 +58,6 @@ function(pico_define_boot_stage2 NAME SOURCES)
+@@ -60,9 +61,6 @@ function(pico_define_boot_stage2 NAME SOURCES)
      target_link_options(${NAME} PRIVATE "LINKER:--script=${PICO_BOOT_STAGE2_DIR}/boot_stage2.ld")
      set_target_properties(${NAME} PROPERTIES LINK_DEPENDS ${PICO_BOOT_STAGE2_DIR}/boot_stage2.ld)
  
@@ -304,3 +241,4 @@ index d503754..bab51ff 100644
  
 -pico_mirrored_target_link_libraries(pico_stdio_rtt INTERFACE pico_stdio)
 +pico_mirrored_target_link_libraries(pico_stdio_rtt INTERFACE pico_stdio pico_binary_info)
+
