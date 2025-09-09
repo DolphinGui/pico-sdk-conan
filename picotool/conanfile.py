@@ -5,7 +5,7 @@ from os.path import join
 
 class Picotool(ConanFile):
     name = "picotool"
-    version = "2.1.1"
+    version = "2.2.0"
     package_type = "application"
 
     license = "BSD-3"
@@ -28,6 +28,7 @@ class Picotool(ConanFile):
     def requirements(self):
         self.requires("mbedtls/2.28.9")
         self.requires("libusb/1.0.26")
+        self.requires(f"picosdk/{self.version}")
 
     def layout(self):
         cmake_layout(self, src_folder = 'picotool')
@@ -35,22 +36,19 @@ class Picotool(ConanFile):
     def source(self):
         with chdir(self, ".."):
             # Downloading two sources is kinda bad, but unfortunately picotool requires the sdk for some reason
-            get(self, **self.conan_data["picotool_sources"][self.version], destination = 'picotool')
-            get(self, **self.conan_data["sdk_sources"][self.version], destination = 'sdk')
-            patch_file = join(self.export_sources_folder, "patches/2.1.1-ptool.patch")
+            get(self, **self.conan_data["picotool_sources"][self.version], destination = 'picotool', strip_root = True)
+            patch_file = join(self.export_sources_folder, f"patches/{self.version}-ptool.patch")
             patch(self, patch_file=patch_file, base_path = join(self.export_sources_folder, "picotool"))
 
     def generate(self):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
-        tc.preprocessor_definitions["HAS_MBEDTLS"] = "1"
         tc.generate()
 
     def build(self):
         cmake = CMake(self)
-        defs = {"PICO_SDK_PATH": join(self.export_sources_folder, "sdk")}
-        cmake.configure(variables = defs)
+        cmake.configure()
         cmake.build()
 
     def package(self):

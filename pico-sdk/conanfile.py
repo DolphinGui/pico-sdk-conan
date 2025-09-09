@@ -4,7 +4,7 @@ from os.path import join
 
 class PicoSDK(ConanFile):
     name = "picosdk"
-    version = "2.1.1"
+    version = "2.2.0"
     package_type = "static-library"
 
     # Optional metadata
@@ -21,8 +21,8 @@ class PicoSDK(ConanFile):
     exports_sources = "patches/*"
     
     def source(self):
-        get(self, **self.conan_data["sources"][self.version]["sdk"])
-        patch_file = join(self.export_sources_folder, "patches/2.1.1-psdk.patch")
+        get(self, **self.conan_data["sources"][self.version]["sdk"], strip_root = True)
+        patch_file = join(self.export_sources_folder, f"patches/{self.version}-psdk.patch")
         patch(self, patch_file=patch_file)
         with chdir(self, "lib"):
             get(self, **self.conan_data["sources"][self.version]["tinyusb"], destination = "tinyusb", strip_root = True)

@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 54e6a9f..47243f6 100644
+index 54e6a9f..3bac35b 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
@@ -27,63 +27,64 @@ index 54e6a9f..47243f6 100644
  
  if (NOT PICOTOOL_NO_LIBUSB)
      # compile xip_ram_perms.elf
-@@ -207,14 +207,14 @@ if (NOT PICOTOOL_NO_LIBUSB)
+@@ -207,7 +207,7 @@ if (NOT PICOTOOL_NO_LIBUSB)
      endif()
  endif()
  
 -if (TARGET mbedtls)
-+#if (TARGET mbedtls)
++if (TARGET MbedTLS::mbedtls)
      add_custom_target(embedded_data_no_libusb DEPENDS
              ${CMAKE_CURRENT_BINARY_DIR}/enc_bootloader_elf.h
              ${CMAKE_CURRENT_BINARY_DIR}/enc_bootloader_mbedtls_elf.h)
--else()
--    add_custom_target(embedded_data_no_libusb DEPENDS
--            ${CMAKE_CURRENT_BINARY_DIR}/enc_bootloader_elf.h)
--endif()
-+#else()
-+#    add_custom_target(embedded_data_no_libusb DEPENDS
-+#            ${CMAKE_CURRENT_BINARY_DIR}/enc_bootloader_elf.h)
-+#endif()
- 
- add_custom_target(embedded_data DEPENDS
-         ${CMAKE_CURRENT_BINARY_DIR}/xip_ram_perms_elf.h
-@@ -319,14 +319,16 @@ target_link_libraries(picotool
+@@ -319,9 +319,11 @@ target_link_libraries(picotool
          elf2uf2
          errors
          nlohmann_json
 -        whereami)
 +        whereami
-+        MbedTLS::mbedtls)
++        MbedTLS::mbedtls
++        MbedTLS::mbedcrypto)
  
 -if (NOT TARGET mbedtls)
--    message("mbedtls not found - no signing/hashing support will be built")
--    target_compile_definitions(picotool PRIVATE HAS_MBEDTLS=0)
--else()
-+#if (NOT TARGET mbedtls)
-+#    message("mbedtls not found - no signing/hashing support will be built")
-+#    target_compile_definitions(picotool PRIVATE HAS_MBEDTLS=0)
-+#else()
-     target_compile_definitions(picotool PRIVATE HAS_MBEDTLS=1)
--endif()
-+#endif()
-+target_link_libraries(picotool MbedTLS::mbedtls MbedTLS::mbedcrypto)
++if (NOT TARGET MbedTLS::mbedtls)
+     message("mbedtls not found - no signing/hashing support will be built")
+     target_compile_definitions(picotool PRIVATE HAS_MBEDTLS=0)
+ else()
+@@ -342,7 +344,8 @@ else()
+     target_compile_definitions(picotool PRIVATE HAS_LIBUSB=1)
+     target_link_libraries(picotool 
+         picoboot_connection_cxx
+-        ${LIBUSB_LIBRARIES})
++        ${LIBUSB_LIBRARIES}
++        libusb::libusb)
+ endif()
  
- if (NOT LIBUSB_FOUND)
-     if (PICOTOOL_NO_LIBUSB)
-@@ -390,14 +392,14 @@ install(FILES
+ if (GENERATE_FIXED_DOCS_WIDTH)
+@@ -390,7 +393,7 @@ install(FILES
      DESTINATION ${INSTALL_DATADIR}
  )
  
 -if (TARGET mbedtls)
-+#if (TARGET mbedtls)
++if (TARGET MbedTLS::mbedtls)
      #Install enc_bootloader_mbedtls.elf
      install(FILES
          ${ENC_BOOTLOADER_MBEDTLS_ELF}
-         DESTINATION ${INSTALL_DATADIR}
-         RENAME enc_bootloader_mbedtls.elf
-     )
--endif()
-+#endif()
+diff --git a/bintool/CMakeLists.txt b/bintool/CMakeLists.txt
+index 4e3edb5..a8717e7 100644
+--- a/bintool/CMakeLists.txt
++++ b/bintool/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-if (NOT TARGET mbedtls)
++if (NOT TARGET MbedTLS::mbedtls)
+     message("lib/mbedtls submodule needs to be initialized for bintool hashing/signing")
+     add_library(bintool STATIC
+             bintool.cpp)
+@@ -25,7 +25,7 @@ else()
+     target_include_directories(bintool PUBLIC ${CMAKE_CURRENT_LIST_DIR})
  
- if (NOT PICOTOOL_NO_LIBUSB)
-     if (NOT PICOTOOL_CODE_OTP)
+     target_link_libraries(bintool PUBLIC
+-            mbedtls
++            MbedTLS::mbedtls
+             elf
+             errors
+             boot_picobin_headers)
